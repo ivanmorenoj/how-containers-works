@@ -1,16 +1,18 @@
-# How linux containers works
+# Understand how linux containers works with practical examples
 
 ![containres](img/containers.jpg)
 
 Nowadays a bast majority of server workloads run using linux containers because of his flexibility and lightweight but have you ever think how does linux containers works. In this tutorial we will demystify how does linux containers works with some practical examples. Linux containers works thanks two kernel features: `namespaces` and `cgroups`.
 
 # Table of contents
+* [Understand how linux containers works with practical examples](#understand-how-linux-containers-works-with-practical-examples)
+* [Table of contents](#table-of-contents)
 * [Linux Namespaces](#linux-namespaces)
 * [Linux control groups (cgroups)](#linux-control-groups-cgroups)
 * [Container Fundamentals (key technologies)](#container-fundamentals-key-technologies)
    * [Process namespace fundamentals](#process-namespace-fundamentals)
-   * [Filesystem - Overlayfs fundamentals](#filesystem---overlayfs-fundamentals)
-   * [Networking - Linux bridge fundamentals](#networking---linux-bridge-fundamentals)
+   * [Filesystem Overlay FS fundamentals](#filesystem-overlay-fs-fundamentals)
+   * [Networking Linux bridge fundamentals](#networking-linux-bridge-fundamentals)
    * [Control groups (cgroups) fundamentals](#control-groups-cgroups-fundamentals)
 * [Create a container from scratch](#create-a-container-from-scratch)
 * [Inspect Namespaces within a docker container](#inspect-namespaces-within-a-docker-container)
@@ -19,7 +21,7 @@ Nowadays a bast majority of server workloads run using linux containers because 
    * [Inspect cgroups in a docker container](#inspect-cgroups-in-a-docker-container)
    * [Inspect overlay fs in a docker container](#inspect-overlay-fs-in-a-docker-container)
    * [Inspect docker process namespace](#inspect-docker-process-namespace)
-* [Conclusion](#conslusion)
+* [Conclusion](#conclusion)
 
 # Linux Namespaces
 A namespace wraps a global system resource in an abstraction that makes it appear to the processes within the namespace that they have their own isolated instance of the global resource.  Changes to the global resource are visible to other processes that are members of the namespace, but are invisible to other processes. One use of namespaces is to implement containers. \[[1](https://man7.org/linux/man-pages/man7/namespaces.7.html)\]
@@ -44,12 +46,12 @@ Cgroups allow you to allocate resources — such as CPU time, system memory, net
 # Container Fundamentals (key technologies)
 
 In this section we gonna make some practices with the following key technologies that make possible the usage of containers in linux:
-- [Process namespace fundamentals](#process-namespace-fundamentals)
-- [Filesystem - Overlayfs fundamentals](#filesystem---overlayfs-fundamentals)
-- [Networking - Linux bridge fundamentals](#networking---linux-bridge-fundamentals)
-- [Control groups (cgroups) fundamentals](#control-groups-cgroups-fundamentals)
+* [Process namespace fundamentals](#process-namespace-fundamentals)
+* [Filesystem Overlay FS fundamentals](#filesystem-overlay-fs-fundamentals)
+* [Networking Linux bridge fundamentals](#networking-linux-bridge-fundamentals)
+* [Control groups (cgroups) fundamentals](#control-groups-cgroups-fundamentals)
 
-NOTE: ***This tutorial was made using a VM with 1GB of ram and 1vCPU using debian 10 buster with kernel `4.19.0-16-amd64`***
+NOTE: ***This tutorial was made using a VM with 1GB of ram and 1vCPU using debian 10 buster with kernel `4.19.0-16-amd64`. All commands were executed using `root` privileges***
 
 ## Process namespace fundamentals
 A process namespace isolate a running command from the host. Let's see how to implement a process namespace in linux.
@@ -81,8 +83,8 @@ List namespaces
 $ lsns -t pid
 ```
 
-## Filesystem - Overlayfs fundamentals
-Containers need to have a filesystem, one of the most used filesystem for containers is `overlay` who can mount with `layes` and merge in a single directory, the lower layers are read only and all changes are made on the upper layer. Let's see how does overlay fs works.
+## Filesystem Overlay FS fundamentals
+Containers need tohave a filesystem, one of the most used filesystem for containers is `overlay` who can mount with `layers` and merge in a single directory, the lower layers are read only and all changes are made on the upper layer. Let's see how does overlay fs works.
 
 Create directories
 ```sh
@@ -114,7 +116,7 @@ Inspect lower and upper dirs
 $ find -name '*.txt' -type f 2>/dev/null | while read fn; do echo ">> cat $fn"; cat $fn; done
 ```
 
-## Networking - Linux bridge fundamentals
+## Networking Linux bridge fundamentals
 Linux container uses network namespaces to isolate the network from the host, this is possible implementing a bridge interface that acts like network switch, and every container connect to that interface with his own ip address. Let's see how does linux bridge and network namespaces works.
 
 Create a Network Virtual bridge
@@ -158,13 +160,15 @@ $ ip -n ns2 addr add 192.168.55.3/24 dev veth-ns2
 ```
 Bring UP veth interfaces within Namespaces
 ```sh
+$ ip -n ns1 link set lo up
+$ ip -n ns2 link set lo up
 $ ip -n ns1 link set veth-ns1 up
 $ ip -n ns2 link set veth-ns2 up
 ```
 Bring UP bridge veth in the local host
 ```sh
-$ ip link set dev br-ns1 up
-$ ip link set dev br-ns2 up
+$ ip link set br-ns1 up
+$ ip link set br-ns2 up
 ```
 
 Configure default route within namespaces
@@ -179,6 +183,15 @@ $ sysctl -w net.ipv4.ip_forward=1
 Configure `MASQUERADE` in the host for `192.168.55.0/24` subnet
 ```sh
 $ iptables -t nat -A POSTROUTING -s 192.168.55.0/24 ! -o br-net -j MASQUERADE
+```
+Check connectivity within namespaces
+```sh
+$ ip netns exec ns1 ping -c 3 192.168.55.3 # ping ns2
+$ ip netns exec ns2 ping -c 3 192.168.55.2 # ping ns1
+$ ip netns exec ns1 ping -c 3 192.168.55.1 # ping br-net gateway
+$ ip netns exec ns2 ping -c 3 192.168.55.1 # ping br-net gateway
+$ ip netns exec ns1 ping -c 3 1.1.1.1 # ping internet
+$ ip netns exec ns2 ping -c 3 1.1.1.1 # ping internet
 ```
 ## Control groups (cgroups) fundamentals
 Control groups or cgroups are used by containers to limit the usage of resource in the host machine. Let's see how does cgroups works.
