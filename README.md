@@ -229,7 +229,7 @@ $ PID1=$!
 $ cat /dev/urandom &> /dev/null &
 $ PID2=$!
 $ cat /dev/urandom &> /dev/null &
-$ PID2=$!
+$ PID3=$!
 ```
 
 Assign process to every user

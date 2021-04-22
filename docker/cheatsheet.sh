@@ -250,8 +250,7 @@ iperf3 --version
 iperf3 -c my_debian
 # busybox
 docker container run -it --rm --name my_busybox --net my_net busybox
-cat /etc/os-release
-telenet -p 5201 my_debian
+telnet my_debian 5201 
 
 
 # Build iperf3 for different base images
@@ -315,4 +314,39 @@ docker container run -it --rm -e IPERF_MODE=client -e SERVER_HOST=iperf_server \
   --net iperf_net docker.io/ivanmorenoj/myiperf:alpine
 docker container run -it --rm --net iperf_net docker.io/ivanmorenoj/myiperf -c iperf_server
 
+
+# Install docker compose
+
+# Download binary
+curl -L "https://github.com/docker/compose/releases/download/1.29.1/docker-compose-$(uname -s)-$(uname -m)" \
+  -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+# For debian based distro
+apt install docker-compose
+# From python3-pip
+pip3 install --upgrade docker-compose
+
+# Docker compose usage
+docker-compose help
+# Usage:
+#  docker-compose [-f <arg>...] [--profile <name>...] [options] [--] [COMMAND] [ARGS...]
+#  docker-compose -h|--help
+
+# docker compose check docker compose file
+docker-compose -f compose-file.yaml config
+
+# Create wordpress
+cd wordpress
+# Create wordpress server
+docker-compose up -d
+# See all logs
+docker-compose logs 
+# See logs from service
+docker-compose logs mysqldb
+# exec commands within a runinig container
+docker-compose exec mysqldb bash
+# delete wordpress server
+docker-compose down
+# clean all
+docker-compose down --volumes
 
