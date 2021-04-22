@@ -1,0 +1,15 @@
+FROM centos
+
+ENV IPERF_MODE=server \ 
+    SERVER_HOST=localhost
+
+COPY init.sh /usr/bin/init.sh
+
+RUN yum install -y iperf3 && \
+    yum clean all && \
+    rm -rf /var/cache/yum && \
+    chmod +x /usr/bin/init.sh
+
+EXPOSE 5201
+
+CMD ["/usr/bin/init.sh"]

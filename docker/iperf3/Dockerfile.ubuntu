@@ -1,0 +1,17 @@
+FROM ubuntu
+
+ENV IPERF_MODE=server \ 
+    SERVER_HOST=localhost
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY init.sh /usr/bin/init.sh
+
+RUN apt-get update && \
+    apt-get install -y iperf3 && \
+    rm -rf /var/lib/apt/lists/* && \
+    chmod +x /usr/bin/init.sh
+
+EXPOSE 5201
+
+CMD ["/usr/bin/init.sh"]
